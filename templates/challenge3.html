@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Challenge 3</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div id="loginPage">
+            <h1>Challenge 3</h1>
+            <p class="subtitle">Trouble with Tokens</p>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                
+                <button type="submit">Login</button>
+            </form>
+            
+            <button class="back-btn" onclick="window.location.href='index.html'">← Back to Challenges</button>
+            <div id="message" class="message"></div>
+        </div>
+        
+        <div id="userDashboard" class="dashboard">
+            <h2>👤 User Dashboard</h2>
+            <div class="dashboard-content">
+                <p><strong>Welcome!</strong></p>
+                <p>You are logged in with a valid token.</p>
+                <p style="margin-top: 15px; color: #666;">Access level: User</p>
+            </div>
+            <button onclick="logout()">Logout</button>
+            <button class="back-btn" onclick="window.location.href='index.html'">← Back to Challenges</button>
+        </div>
+        
+        <div id="adminDashboard" class="dashboard">
+            <h2>Admin Dashboard</h2>
+            <div class="dashboard-content">
+                <p><strong>Welcome, Administrator!</strong></p>
+                
+                <div class="flag">
+                    ekc{jwt_n0n3_alg0r1thm_pwn3d}
+                </div>
+                
+            </div>
+            <button onclick="logout()">Logout</button>
+            <button class="back-btn" onclick="window.location.href='index.html'">← Back to Challenges</button>
+        </div>
+    </div>
+    
+    <script src="challenge3.js"></script>
+</body>
+</html>
