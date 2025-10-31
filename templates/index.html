@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Heartland Harvest CTF</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <div class="container">
@@ -13,24 +13,18 @@
         <p class="subtitle">Complete the challenges one at a time. You may have to login as an admin to find the flag</p>
         
         <div class="challenge-list">
-            <a href="challenge1.html" class="challenge-card">
-                <h3>
-                    Challenge 1
-                </h3>
+            <a href="{{ url_for('c1') }}" class="challenge-card">
+                <h3>Challenge 1</h3>
                 <p>Easy</p>
             </a>
             
-            <a href="challenge2.html" class="challenge-card">
-                <h3>
-                    Challenge 2
-                </h3>
+            <a href="{{ url_for('c2') }}" class="challenge-card">
+                <h3>Challenge 2</h3>
                 <p>Medium</p>
             </a>
             
-            <a href="challenge3.html" class="challenge-card">
-                <h3>
-                    Challenge 3
-                </h3>
+            <a href="{{ url_for('c3') }}" class="challenge-card">
+                <h3>Challenge 3</h3>
                 <p>Hard</p>
             </a>
         </div>

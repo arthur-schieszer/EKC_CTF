@@ -1,86 +1,68 @@
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-    return null;
-}
+// challenge2.js - cookie-based role (base64). Change cookie to btoa("admin") to get flag.
+document.addEventListener("DOMContentLoaded", function () {
+    const loginForm = document.getElementById("loginForm");
+    const message = document.getElementById("message");
+    const loginPage = document.getElementById("loginPage");
+    const userDashboard = document.getElementById("userDashboard");
+    const adminDashboard = document.getElementById("adminDashboard");
+    const flagContainer = document.getElementById("flagContainer");
 
-function setCookie(name, value, days = 7) {
-    const expires = new Date();
-    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
-}
-
-function deleteCookie(name) {
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-}
-
-function showMessage(text, type) {
-    const messageEl = document.getElementById('message');
-    messageEl.textContent = text;
-    messageEl.className = `message ${type}`;
-    messageEl.style.display = 'block';
-    
-    setTimeout(() => {
-        messageEl.style.display = 'none';
-    }, 3000);
-}
-
-function checkAuth() {
-    const role = getCookie('role');
-    
-    if (!role) {
-        document.getElementById('loginPage').style.display = 'block';
-        document.getElementById('userDashboard').style.display = 'none';
-        document.getElementById('adminDashboard').style.display = 'none';
-        return;
+    function showMessage(text, cls) {
+        message.textContent = text;
+        message.className = "message " + (cls || "success");
+        message.style.display = "block";
     }
-    
-    let decodedRole;
-    try {
-        decodedRole = atob(role);
-    } catch (e) {
-        document.getElementById('loginPage').style.display = 'block';
-        document.getElementById('userDashboard').style.display = 'none';
-        document.getElementById('adminDashboard').style.display = 'none';
-        return;
-    }
-    
-    if (decodedRole === 'admin') {
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('userDashboard').style.display = 'none';
-        document.getElementById('adminDashboard').style.display = 'block';
-    } else if (decodedRole === 'user') {
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('userDashboard').style.display = 'block';
-        document.getElementById('adminDashboard').style.display = 'none';
-    } else {
-        document.getElementById('loginPage').style.display = 'block';
-        document.getElementById('userDashboard').style.display = 'none';
-        document.getElementById('adminDashboard').style.display = 'none';
-    }
-}
 
-function logout() {
-    deleteCookie('role');
-    checkAuth();
-    showMessage('Logged out successfully', 'success');
-}
-
-document.getElementById('loginForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    
-    if (username && password) {
-        setCookie('role', btoa('user'));
-        showMessage('Login successful!', 'success');
-        
-        setTimeout(() => {
-            checkAuth();
-        }, 1000);
+    function showView(role) {
+        loginPage.style.display = role ? "none" : "block";
+        userDashboard.style.display = role === "user" ? "block" : "none";
+        adminDashboard.style.display = role === "admin" ? "block" : "none";
     }
+
+    async function fetchFlag() {
+        const res = await fetch("/api/flag/challenge2");
+        if (res.ok) {
+            const j = await res.json();
+            flagContainer.textContent = j.flag;
+        } else {
+            flagContainer.textContent = "Flag not available.";
+        }
+    }
+
+    // set default role cookie to "user" (base64) so players start as non-admin
+    // cookie path is / so /api/login can see it
+    (function ensureDefaultRoleCookie(){
+        const name = "role=";
+        if (!document.cookie.split('; ').find(row => row.startsWith("role="))) {
+            document.cookie = "role=" + btoa("user") + "; path=/";
+        }
+    })();
+
+    loginForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+
+        // We do NOT send role in JSON; server reads cookie "role" (base64) and sets session accordingly.
+        const res = await fetch("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password })
+        });
+        const j = await res.json();
+        if (j.ok) {
+            showMessage("Login successful — role: " + j.role, "success");
+            showView(j.role);
+            if (j.role === "admin") {
+                await fetchFlag();
+            }
+        } else {
+            showMessage("Login failed", "error");
+        }
+    });
 });
 
-checkAuth();
+async function logout() {
+    await fetch("/api/logout", { method: "POST" });
+    window.location.reload();
+}

@@ -1,103 +1,123 @@
-import os
 import base64
+import hmac
+import hashlib
+import json
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 
-# Simple XOR-based obfuscation helper (server-side)
-def _xor_bytes(data: bytes, key: bytes) -> bytes:
-    return bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
+# --- lightly obfuscated secrets ---
+# base64 of a random secret key (do not use in production)
+_OBFUSCATED_SECRET = b'c2VjcmV0X2ZsYXNrX3NlY3JldA=='     # "secret_flask_secret"
+# base64 of the admin password
+_OBFUSCATED_ADMIN_PASS = b'YWRtMW5wYXNz'  # "adm1npass"
 
-def decode_obfuscated_flag(b64_obf: str, secret_key: bytes) -> str:
-    raw = base64.b64decode(b64_obf)
-    decoded = _xor_bytes(raw, secret_key)
-    return decoded.decode('utf-8', errors='ignore')
+def _decode(b):
+    return base64.b64decode(b).decode()
 
-# Default secret (used to obfuscate the in-code flags).
-# IMPORTANT: change APP_SECRET in your environment for real use.
-DEFAULT_SECRET = b"my_default_secret_2025"
-APP_SECRET = os.environ.get("APP_SECRET", None)
-SECRET_KEY_BYTES = APP_SECRET.encode() if APP_SECRET else DEFAULT_SECRET
+def _b64url_decode(inp: str) -> bytes:
+    # Accept both b64 and base64url (JWT style)
+    inp = inp.replace('-', '+').replace('_', '/')
+    padding = len(inp) % 4
+    if padding:
+        inp += '=' * (4 - padding)
+    return base64.b64decode(inp)
 
-app = Flask(__name__, static_folder="static", template_folder="templates")
-# Flask session secret key (keeps session cookie secure). Use APP_SECRET if set.
-app.secret_key = os.environ.get("FLASK_SESSION_KEY", os.environ.get("APP_SECRET", "fallback_session_key_2025"))
+app = Flask(__name__)
+app.secret_key = _decode(_OBFUSCATED_SECRET)
 
-# --- Obfuscated flags stored here (NOT in client files) ---
-# These were produced by XORing the flag bytes with DEFAULT_SECRET and base64-encoding the result.
-OBF_FLAG_2 = "CBI8HwZWUR5dRywsURFBOhpvRm9BBg4MLVcY"
-OBF_FLAG_3 = "CBI8Hw8RFSoCRDFAOgIeAkQtA0RaWDIJKApWAhw="
+# --- flags (hard-coded for development) ---
+FLAGS = {
+    "challenge2": "ekc{c00k13s_4r3_n0t_s3cur3}",
+    "challenge3": "ekc{jwt_n0n3_alg0r1thm_pwn3d}"
+}
 
-# Admin credentials (server-side). You may set ADMIN_PASS via env for realism.
-ADMIN_USER = "admin"
-ADMIN_PASS = os.environ.get("ADMIN_PASS", "adminpass123")  # change for real event
-
-# Simple user credentials for demonstration
-USER_USER = "user"
-USER_PASS = "password"
+# --- simple user check ---
+def check_credentials(username, password):
+    # regular users: any username/password -> role 'user'
+    # admin credentials: username == 'admin' and password matches obfuscated admin pass
+    admin_pass = _decode(_OBFUSCATED_ADMIN_PASS)
+    if username == "admin" and password == admin_pass:
+        return "admin"
+    return "user"
 
 @app.route("/")
-def index():
+def home():
     return render_template("index.html")
 
 @app.route("/challenge1")
-def challenge1():
+def c1():
+    # challenge 1 is the "needle in haystack" single-page static (left as client-side)
     return render_template("challenge1.html")
 
-# ---- Challenge 2: username/password login ----
 @app.route("/challenge2")
-def challenge2():
+def c2():
     return render_template("challenge2.html")
 
-@app.route("/api/challenge2/login", methods=["POST"])
-def challenge2_login():
-    data = request.get_json() or {}
-    username = data.get("username", "")
-    password = data.get("password", "")
-
-    if username == ADMIN_USER and password == ADMIN_PASS:
-        session["role"] = "admin"
-        # decode flag on-demand server-side
-        flag = decode_obfuscated_flag(OBF_FLAG_2, SECRET_KEY_BYTES)
-        return jsonify({"success": True, "role": "admin", "flag": flag})
-    elif username == USER_USER and password == USER_PASS:
-        session["role"] = "user"
-        return jsonify({"success": True, "role": "user"})
-    else:
-        return jsonify({"success": False, "message": "Invalid credentials"}), 401
-
-@app.route("/api/challenge2/logout", methods=["POST"])
-def challenge2_logout():
-    session.pop("role", None)
-    return jsonify({"success": True})
-
-# ---- Challenge 3: token-check style (still via POST form to keep UI similar) ----
 @app.route("/challenge3")
-def challenge3():
+def c3():
     return render_template("challenge3.html")
 
-# For this simple CTF, challenge3 also accepts username/password but demonstrates
-# the server-side gating of the flag (same pattern).
-@app.route("/api/challenge3/login", methods=["POST"])
-def challenge3_login():
-    data = request.get_json() or {}
+# --- API endpoints for login/logout and flag retrieval ---
+@app.route("/api/login", methods=["POST"])
+def api_login():
+    # 1) If a token is provided in JSON body, prefer that (JWT challenge)
+    data = request.json or {}
+    token = data.get("token")
+    if token:
+        try:
+            parts = token.split('.')
+            if len(parts) >= 2:
+                header_b, payload_b = parts[0], parts[1]
+                header_json = json.loads(_b64url_decode(header_b).decode())
+                payload_json = json.loads(_b64url_decode(payload_b).decode())
+                alg = header_json.get("alg", "").lower()
+                if alg == "none":
+                    # take role directly from payload (only 'admin' or 'user' allowed)
+                    role_raw = payload_json.get("role", "")
+                    role = "admin" if role_raw == "admin" else "user"
+                    session["role"] = role
+                    # username can be optional; preserve existing username if provided in JSON
+                    session["username"] = (request.json.get("username", "") if request.json else "")
+                    return jsonify({"ok": True, "role": role})
+                # else: not 'none' -> let fall through to credential-based path
+        except Exception:
+            # malformed token -> ignore and fall back
+            pass
+
+    # 2) If there's a role cookie, prefer it (cookie should be base64 encoded)
+    role_cookie = request.cookies.get("role")
+    if role_cookie:
+        try:
+            decoded = base64.b64decode(role_cookie).decode()
+            role = "admin" if decoded == "admin" else "user"
+            session["role"] = role
+            session["username"] = data.get("username", "") if data else ""
+            return jsonify({"ok": True, "role": role})
+        except Exception:
+            pass
+
+    # 3) fallback: old credential-based behavior
     username = data.get("username", "")
     password = data.get("password", "")
+    role = check_credentials(username, password)
+    session["role"] = role
+    session["username"] = username
+    return jsonify({"ok": True, "role": role})
 
-    # You can create a more complex token mechanism for the challenge.
-    # Here: admin credentials grant role 'admin'.
-    if username == ADMIN_USER and password == ADMIN_PASS:
-        session["role"] = "admin"
-        flag = decode_obfuscated_flag(OBF_FLAG_3, SECRET_KEY_BYTES)
-        return jsonify({"success": True, "role": "admin", "flag": flag})
-    elif username == USER_USER and password == USER_PASS:
-        session["role"] = "user"
-        return jsonify({"success": True, "role": "user"})
-    else:
-        return jsonify({"success": False, "message": "Invalid credentials"}), 401
+@app.route("/api/logout", methods=["POST"])
+def api_logout():
+    session.clear()
+    return jsonify({"ok": True})
 
-@app.route("/api/challenge3/logout", methods=["POST"])
-def challenge3_logout():
-    session.pop("role", None)
-    return jsonify({"success": True})
+@app.route("/api/flag/<challenge>", methods=["GET"])
+def api_flag(challenge):
+    # only return the flag for admin sessions
+    role = session.get("role")
+    if role != "admin":
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    flag = FLAGS.get(challenge)
+    if not flag:
+        return jsonify({"ok": False, "error": "not found"}), 404
+    return jsonify({"ok": True, "flag": flag})
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0")

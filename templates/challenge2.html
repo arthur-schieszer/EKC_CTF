@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>Challenge 2</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <div class="container">
@@ -26,7 +26,7 @@
                 <button type="submit">Login</button>
             </form>
             
-            <button class="back-btn" onclick="window.location.href='index.html'">← Back to Challenges</button>
+            <button class="back-btn" onclick="window.location.href='{{ url_for('home') }}'">← Back to Challenges</button>
             <div id="message" class="message"></div>
         </div>
         
@@ -38,7 +38,7 @@
                 <p style="margin-top: 15px; color: #666;">You do not have access to admin features.</p>
             </div>
             <button onclick="logout()">Logout</button>
-            <button class="back-btn" onclick="window.location.href='index.html'">← Back to Challenges</button>
+            <button class="back-btn" onclick="window.location.href='{{ url_for('home') }}'">← Back to Challenges</button>
         </div>
         
         <div id="adminDashboard" class="dashboard">
@@ -46,15 +46,16 @@
             <div class="dashboard-content">
                 <p><strong>Welcome, Administrator!</strong></p>
                 
-                <div class="flag">
-                    ekc{c00k13s_4r3_n0t_s3cur3}
+                <div id="flagContainer" class="flag">
+                    <!-- flag filled from server only if admin -->
+                    <!-- nice try :) -->
                 </div>
             </div>
             <button onclick="logout()">Logout</button>
-            <button class="back-btn" onclick="window.location.href='index.html'">← Back to Challenges</button>
+            <button class="back-btn" onclick="window.location.href='{{ url_for('home') }}'">← Back to Challenges</button>
         </div>
     </div>
     
-    <script src="challenge2.js"></script>
+    <script src="{{ url_for('static', filename='challenge2.js') }}"></script>
 </body>
 </html>
