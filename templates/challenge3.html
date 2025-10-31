@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>Challenge 3</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <div class="container">
@@ -26,7 +26,7 @@
                 <button type="submit">Login</button>
             </form>
             
-            <button class="back-btn" onclick="window.location.href='index.html'">← Back to Challenges</button>
+            <button class="back-btn" onclick="window.location.href='{{ url_for('home') }}'">← Back to Challenges</button>
             <div id="message" class="message"></div>
         </div>
         
@@ -38,7 +38,7 @@
                 <p style="margin-top: 15px; color: #666;">Access level: User</p>
             </div>
             <button onclick="logout()">Logout</button>
-            <button class="back-btn" onclick="window.location.href='index.html'">← Back to Challenges</button>
+            <button class="back-btn" onclick="window.location.href='{{ url_for('home') }}'">← Back to Challenges</button>
         </div>
         
         <div id="adminDashboard" class="dashboard">
@@ -46,16 +46,13 @@
             <div class="dashboard-content">
                 <p><strong>Welcome, Administrator!</strong></p>
                 
-                <div class="flag">
-                    ekc{jwt_n0n3_alg0r1thm_pwn3d}
-                </div>
-                
+                <div id="flagContainer" class="flag"></div>
             </div>
             <button onclick="logout()">Logout</button>
-            <button class="back-btn" onclick="window.location.href='index.html'">← Back to Challenges</button>
+            <button class="back-btn" onclick="window.location.href='{{ url_for('home') }}'">← Back to Challenges</button>
         </div>
     </div>
     
-    <script src="challenge3.js"></script>
+    <script src="{{ url_for('static', filename='challenge3.js') }}"></script>
 </body>
 </html>
